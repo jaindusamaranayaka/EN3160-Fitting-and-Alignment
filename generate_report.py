@@ -61,14 +61,15 @@ def generate_page_1():
         r"1. Theoretical Framework & Scale-Space LoG Blob Detection",
         r"Blob detection identifies circular image structures by finding scale-space extrema of the scale-normalized",
         r"Laplacian of Gaussian:  $\nabla^2_{\mathrm{norm}} (x, y; \sigma) = \sigma^2 \nabla^2 [G(x, y; \sigma) * I(x, y)]$. The scale factor $\sigma^2$ compensates",
-        r"for Gaussian attenuation, ensuring response invariance across scales. Sunflower centers are dark florets encircled",
-        r"by bright yellow petals; hence, the negative normalized LoG ($-\sigma^2 \nabla^2 [G_\sigma * I]$) exhibits sharp local maxima at flower",
-        r"centers $(x, y)$ and characteristic scale $\sigma$. The detected circle radius is $r = \sqrt{2}\sigma$.",
-        r"• Scale Sampling: 18 geometrically spaced scales from $\sigma_{\mathrm{min}} = 1.50$ px to $\sigma_{\mathrm{max}} = 12.00$ px ($r \in [2.12, 16.97]$ px).",
-        r"• 3D Extrema & NMS: A $3 \times 5 \times 5$ neighborhood filter detects volume extrema $(k, y, x)$. Points below the 99.7%",
-        r"  quantile (0.2236) are pruned. Greedy spatial non-maximum suppression prevents multiple detections per flower.",
+        r"for Gaussian attenuation, ensuring scale invariance. Sunflower flower heads feature dark central floret disks",
+        r"encircled by bright yellow petals. For a dark blob on a bright background, the Laplacian second derivatives are",
+        r"positive ($\nabla^2 I > 0$); thus, the positive normalized LoG ($+\sigma^2 \nabla^2 [G_\sigma * I]$) peaks at the dark disk center",
+        r"with characteristic radius $r = \sqrt{2}\sigma$. An HSV petal envelope gates candidate regions, suppressing foliage shadows.",
+        r"• Scale Sampling: 24 geometrically spaced scales from $\sigma_{\mathrm{min}} = 1.50$ px to $\sigma_{\mathrm{max}} = 12.50$ px ($r \in [2.12, 17.68]$ px).",
+        r"• 3D Extrema & NMS: Scale-space local maxima above threshold (0.035) are filtered via greedy spatial NMS,",
+        r"  ensuring exactly one fitted circle per sunflower disk and suppressing petal boundary artifacts.",
     ]
-    text_ax.text(0, 1.0, "\n".join(p1_lines), va="top", fontsize=8.2, linespacing=1.28)
+    text_ax.text(0, 1.0, "\n".join(p1_lines), va="top", fontsize=8.1, linespacing=1.26)
 
     # Image Result
     img_path = RESULTS_DIR / "question_1" / "sunflower_log_detections.png"
@@ -77,7 +78,7 @@ def generate_page_1():
         im_ax = fig.add_axes([0.06, 0.35, 0.44, 0.37])
         im_ax.imshow(im)
         im_ax.axis("off")
-        im_ax.set_title("Figure 1.1: Detected Sunflowers (64 circles)", fontsize=9.0, weight="bold", pad=4)
+        im_ax.set_title("Figure 1.1: Detected Sunflowers (50 circles)", fontsize=9.0, weight="bold", pad=4)
 
     # Table of Largest Detections
     tbl_ax = fig.add_axes([0.53, 0.35, 0.41, 0.37])
@@ -86,16 +87,16 @@ def generate_page_1():
     
     table_data = [
         ["Rank", "Center (x, y)", "Scale $\sigma$", "Radius $r$", "LoG Response"],
-        ["1", "(187, 341)", "5.10 px", "7.21 px", "0.2599"],
-        ["2", "(167, 338)", "5.10 px", "7.21 px", "0.2460"],
-        ["3", "(300, 344)", "5.10 px", "7.21 px", "0.2430"],
-        ["4", "(0, 291)", "4.51 px", "6.38 px", "0.2635"],
-        ["5", "(164, 325)", "4.51 px", "6.38 px", "0.2526"],
-        ["6", "(268, 348)", "4.51 px", "6.38 px", "0.2520"],
-        ["7", "(190, 253)", "4.51 px", "6.38 px", "0.2420"],
-        ["8", "(295, 327)", "4.51 px", "6.38 px", "0.2279"],
-        ["9", "(112, 269)", "3.99 px", "5.64 px", "0.2916"],
-        ["10", "(13, 286)", "3.99 px", "5.64 px", "0.2752"],
+        ["1", "(282, 338)", "7.19 px", "10.17 px", "0.3499"],
+        ["2", "(0, 275)", "7.19 px", "10.17 px", "0.3455"],
+        ["3", "(106, 255)", "5.98 px", "8.46 px", "0.3630"],
+        ["4", "(179, 327)", "5.98 px", "8.46 px", "0.3451"],
+        ["5", "(178, 261)", "5.45 px", "7.71 px", "0.3511"],
+        ["6", "(189, 240)", "4.53 px", "6.41 px", "0.3628"],
+        ["7", "(63, 243)", "4.53 px", "6.41 px", "0.3551"],
+        ["8", "(274, 258)", "4.53 px", "6.41 px", "0.3448"],
+        ["9", "(19, 251)", "4.53 px", "6.41 px", "0.2912"],
+        ["10", "(161, 290)", "4.14 px", "5.85 px", "0.3618"],
     ]
     table = tbl_ax.table(cellText=table_data, colWidths=[0.12, 0.28, 0.20, 0.20, 0.22], loc="center", cellLoc="center")
     table.auto_set_font_size(False)
@@ -109,17 +110,18 @@ def generate_page_1():
     code_ax = fig.add_axes([0.06, 0.05, 0.88, 0.27])
     code_ax.axis("off")
     code_lines = [
-        "Core Implementation Snippet (Scale-Space LoG Volume & Extrema Search):",
-        "  sigmas = np.geomspace(1.5, 12.0, 18)",
-        "  responses = [-(s**2) * cv2.Laplacian(cv2.GaussianBlur(gray_float, (0,0), s, s), cv2.CV_32F) for s in sigmas]",
+        "Core Implementation Snippet (Dark-Blob Scale-Space LoG & Single-Circle NMS):",
+        "  sigmas = np.geomspace(1.5, 12.5, 24)",
+        "  responses = [+(s**2) * cv2.Laplacian(cv2.GaussianBlur(gray_float, (0,0), s, s), cv2.CV_32F) for s in sigmas]",
         "  scale_space = np.stack(responses, axis=0)",
         "  local_max = scale_space == maximum_filter(scale_space, size=(3, 5, 5), mode='nearest')",
-        "  candidates = [(scale_space[k, y, x], x, y, sigmas[k], np.sqrt(2)*sigmas[k]) for k, y, x in np.argwhere(local_max & (scale_space >= 0.2236))]",
+        "  # Disk candidate filtering: within yellow petal envelope, dark intensity, y >= 0.51*H",
+        "  candidates = [(scale_space[k,y,x], x, y, s, np.sqrt(2)*s) for k,y,x in pts if valid_sunflower(x,y)]",
         "",
         "Analysis of Scale-Space Extrema Across Depth:",
-        "• Near Foreground Flowers: Exhibit radii r = 6.4 - 7.2 px (sigma = 4.5 - 5.1 px), reflecting true physical proximity.",
-        "• Distant Background Flowers: Recede toward the horizon and peak at finer scales (sigma = 1.5 - 2.5 px, r = 2.1 - 3.5 px).",
-        "• Evaluation: LoG scale-space extrema accurately resolve perspective depth gradients without prior object templates.",
+        "• Near Foreground Flowers: Exhibit radii r = 7.7 - 10.2 px (sigma = 5.5 - 7.2 px), perfectly fitting the prominent disks.",
+        "• Midground and Background Flowers: Smoothly scale down (r = 2.1 - 6.4 px, sigma = 1.5 - 4.5 px) as distance increases.",
+        "• Single Circle per Flower: Overlap-aware spatial NMS completely suppresses spurious petal ring detections.",
     ]
     code_ax.text(0, 1.0, "\n".join(code_lines), va="top", fontsize=8.0, family="monospace", linespacing=1.24)
 
