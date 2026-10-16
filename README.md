@@ -3,6 +3,7 @@
 Repository for EN3160 Computer Vision Assignment 2 on Fitting and Alignment.
 - **Student**: Jaindu Samaranayaka
 - **Index**: 230563H
+- **GitHub Repository**: [jaindusamaranayaka/EN3160-Fitting-and-Alignment](https://github.com/jaindusamaranayaka/EN3160-Fitting-and-Alignment)
 - **Assignment Brief**: [`en3160_assignment_02.pdf`](./en3160_assignment_02.pdf)
 - **Final Report**: [`report/230563H_a02.pdf`](./report/230563H_a02.pdf) (4 pages)
 
@@ -10,29 +11,31 @@ Repository for EN3160 Computer Vision Assignment 2 on Fitting and Alignment.
 
 ## Assignment Tasks
 
-1. **Question 1: Sunflower Center Detection via Scale-Space LoG**
-   - Detects dark central disks using positive scale-normalized Laplacian of Gaussian: $+\sigma^2 \nabla^2(G_\sigma * I)$.
-   - Employs yellow-petal HSV envelope gating and spatial non-maximum suppression (NMS) to fit exactly one circle ($r = \sqrt{2}\sigma$) per flower disk across depth.
+1. **Question 1: Sunflower Center Detection via Scale-Space LoG Extrema**
+   - Detects dark central floret disks using the positive scale-normalized Laplacian of Gaussian: $+\sigma^2 \nabla^2(G_\sigma * I)$ with characteristic radius $r = \sqrt{2}\sigma$.
+   - Applies 4 hand-tuned candidate filters: (1) horizon row cutoff $y \ge 0.51H = 184$ px, (2) dilated HSV petal envelope ($H \in [14, 36], S, V \ge 70$), (3) grayscale dark floret test $I(x, y) \le 0.48$, and (4) LoG response peak $\ge 0.035$. Boundary margin $x, y \in [6, 354]$ px suppresses border reflections.
+   - Evaluates perspective depth scaling trend ($r = 0.054y - 8.37$, $R = 0.87$) and documents scale boundary limitation at $\sigma_{\min} = 1.5$ px ($r = 2.12$ px).
    - Script: [`src/q1_sunflower_detector.py`](./src/q1_sunflower_detector.py) | Result: [`results/question_1/sunflower_log_detections.png`](./results/question_1/sunflower_log_detections.png)
 
 2. **Question 2: Robust Line and Circle Fitting via Sequential RANSAC**
-   - Implements custom RANSAC with unit normal parameterization $\|[a, b]^\top\| = 1$.
-   - Sequentially estimates the line, removes inliers, and fits the remnant circle using radial error consensus and Nelder-Mead geometric distance minimization.
-   - Analyzes sensitivity and explains why fitting circle first captures spurious tangential arcs.
+   - Implements custom RANSAC with unit normal parameterization $\|[a, b]^\top\| = 1$ and distance threshold $T = 0.85$.
+   - Sequentially estimates the line, performs Total Least Squares (TLS) SVD refit on inliers, and fits the remnant circle using circumcenter sampling and Nelder-Mead optimization.
+   - Features full numerical validation against ground truth ($\mathbf{n} \approx [0.7071, 0.7071]^\top, d \approx 1.4142, c=(2, 3), r=10$), plots both sample and refined fits, and justifies consensus sizes ($T_{\min} = 30-35$) and iterations using $N = \ln(1-p)/\ln(1-w^s)$.
+   - Honestly runs and reports real circle-first RANSAC on the full point cloud: recovers circle with 47 inliers but demonstrates partial degeneracy by capturing 5 line points across intersections, fragmenting the remnant line.
    - Script: [`src/q2_ransac_fitting.py`](./src/q2_ransac_fitting.py) | Result: [`results/question_2/line_circle_ransac.png`](./results/question_2/line_circle_ransac.png)
 
 3. **Question 3: Planar Homography Warping and Flag Blending**
-   - Dual-mode corner selector ([`src/corner_selector.py`](./src/corner_selector.py)): supports live OpenCV interactive GUI clicking as well as robust calibrated presets for headless/IDE execution.
-   - Computes Direct Linear Transformation (DLT) via SVD and warps the flag onto three distinct architectural planes with alpha blending:
-     1. Left Courtyard Wall (Assignment Figure 2 replication)
-     2. Courtyard Lawn (Ceremonial banner display)
-     3. Right Chapel Facade (Orthogonal plane)
-   - Script: [`src/q3_homography_warper.py`](./src/q3_homography_warper.py) | Results: [`results/question_3/`](./results/question_3/)
+   - Implements Direct Linear Transformation (DLT) via SVD and verifies against OpenCV's DLT solver to machine precision ($< 10^{-8}$).
+   - Processes two distinct image pairs with plain-terms non-technical rationales:
+     1. **Pair 1 (Wadham College + British Flag)**: Oxford residential quadrangle wall between dorm windows, celebrating British collegiate heritage.
+     2. **Pair 2 (Civic Academic Building + Sri Lankan Flag)**: Main upper facade plane of a university hall for an international cultural festival celebrating student diversity.
+   - Script: [`src/q3_homography_warper.py`](./src/q3_homography_warper.py) | Results: [`results/question_3/homography_warping_pairs.png`](./results/question_3/homography_warping_pairs.png)
 
-4. **Question 4: PCB SIFT Matching & Homography Alignment**
-   - Detects SIFT keypoints, matches with BFMatcher and Lowe's ratio test (0.75).
-   - Computes robust homography with RANSAC to align all 5 test PCBs (`AECC2` - `AECC6`) to template `AECC1`.
-   - Computes absolute difference images highlighting missing components, solder bridges, and assembly defects.
+4. **Question 4: PCB SIFT Matching, Homography Alignment, and Defect Inspection**
+   - Detects SIFT keypoints, matches with BFMatcher and Lowe's ratio test (0.75), and estimates homography via RANSAC.
+   - Delivers `cv2.drawMatches` correspondence visualization (4b) and comparative difference images across **all five** candidate boards (`AECC2`, `AECC3`, `AECC4`, `ADAD1`, `AAAA1`) (4d).
+   - Code-generates alignment statistics table, classifies `AAAA1` as an **ALIGNMENT FAILURE** (< 20 inliers, 35.3%) without fabricating defect claims, identifies `ADAD1` layout mismatch, and localizes verified defect clusters on `AECC4`.
+   - Explains causes of component differences in 4(e): 3D projective parallax, cast shadows, residual edge misregistration, specular glints, and component variations.
    - Script: [`src/q4_pcb_alignment.py`](./src/q4_pcb_alignment.py) | Results: [`results/question_4/`](./results/question_4/)
 
 ---
@@ -57,7 +60,6 @@ Repository for EN3160 Computer Vision Assignment 2 on Fitting and Alignment.
 │   ├── q3_homography_warper.py   # Question 3 standalone runner
 │   └── q4_pcb_alignment.py       # Question 4 standalone runner
 ├── a2images/                     # Supplied input images (sunflower, Wadham, flag, PCBs)
-├── generate_report.py            # PDF report generator script (builds 230563H_a02.pdf)
 ├── en3160_assignment_02.pdf      # Assignment brief
 ├── requirements.txt              # Python package dependencies
 └── README.md                     # Project documentation
@@ -80,12 +82,7 @@ Repository for EN3160 Computer Vision Assignment 2 on Fitting and Alignment.
    python src/q4_pcb_alignment.py
    ```
 
-3. **Regenerate report PDF**:
-   ```bash
-   python generate_report.py
-   ```
-
-4. **Launch Jupyter notebook**:
+3. **Launch Jupyter notebook**:
    ```bash
    jupyter notebook notebooks/assignment_02.ipynb
    ```
