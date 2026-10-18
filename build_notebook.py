@@ -281,8 +281,8 @@ def create_notebook():
             "- **Line model:** Unit normal $[a, b]^\\top$ ($\\|[a, b]\\|=1$), offset $d$: $a x + b y = d$. Error $e = |a x + b y - d|$. Threshold $T = 0.85$. Refitted via Total Least Squares (TLS) SVD on consensus points.\n",
             "- **Circle model:** Center $(x_0, y_0)$, radius $r$ from 3-point circumcenters. Distance threshold $T = 0.85$. Refined via Nelder-Mead.\n",
             "- **Consensus size & iterations:** Setting minimum consensus $T_{\\\\min} = 30-35$ ensures $\\ge 60-70%$ true model participation while preventing noise clusters from forming models. By $N = \\frac{\\ln(1 - p)}{\\ln(1 - w^s)}$ with confidence $p = 0.99$:\n",
-            "  - Line ($s=2, w=0.5$): $N = \\frac{\\ln(0.01)}{\\ln(1 - 0.25)} \\approx 16$ iterations ($22$ for $p=0.999$).\n",
-            "  - Remnant circle ($s=3, w \\approx 0.84$): $N = \\frac{\\ln(0.01)}{\\ln(1 - 0.84^3)} \\approx 5$ iterations. 500 iterations guarantee ample theoretical safety.\n"
+            "  - Line ($s=2, w=0.5$): $N = \\frac{\\ln(0.01)}{\\ln(1 - 0.25)} \\approx 17$ iterations ($25$ for $p=0.999$).\n",
+            "  - Remnant circle ($s=3, w \\approx 0.84$): $N = \\frac{\\ln(0.01)}{\\ln(1 - 0.84^3)} \\approx 6$ iterations. 500 iterations guarantee ample theoretical safety.\n"
         ]
     })
 
@@ -362,7 +362,7 @@ def create_notebook():
             "\n",
             "### Question 2(d): Analysis of Circle-First Fitting\n",
             "- **Line inlier intersection crossing:** Line-first consensus (45 inliers) captures 41 true line points and 4 circle points where the line cuts through the circle circumference ($|a x + b y - d| < 0.85$).\n",
-            "- **Honest report on circle-first RANSAC:** Running circle RANSAC on full cloud $X$ recovers center $(2.08, 2.91)$ and $r = 9.87$ with 47 inliers. It is **partly degenerate and contaminated**: it absorbs 42 circle points and 5 intersecting line points (Figure 2.2). Subtracting this consensus strips away those 5 line points, fragmenting the line into disconnected segments.\n",
+            "- **Honest report on circle-first RANSAC:** Running circle RANSAC on full cloud $X$ recovers a refined radius $r = 10.01$ with 45 inliers. It is contaminated: it absorbs 39 circle points and 6 intersecting line points (Figure 2.2). Subtracting this consensus removes those 6 line points, fragmenting the line into disconnected segments.\n",
             "- **Degenerate arc tendency:** 3 collinear points from the line tend to define low-curvature, high-radius circumcircles ($r > 500$) sweeping up $\\approx 40$ collinear points, creating flat pseudo-line arcs.\n",
             "- **Sampling probability:** Line fitting requires $s=2$ ($P = 0.5^2 = 0.25$); circle requires $s=3$ ($P = 0.5^3 = 0.125$). Line-first succeeds $2\\times$ faster and leaves an uncontaminated remnant for circle refinement.\n"
         ]
@@ -378,7 +378,7 @@ def create_notebook():
             "\n",
             "## Question 3: Planar Homography Warping and Flag Blending\n",
             "A planar homography is a $3 \\times 3$ projective matrix $\\mathbf{H}$ (8 degrees of freedom) relating coplanar points across views: $\\mathbf{x}' \\sim \\mathbf{H}\\mathbf{x}$.\n",
-            "- **Direct Linear Transformation (DLT) via SVD:** For 4 corner correspondences $\\mathbf{x}_i \\leftrightarrow \\mathbf{x}'_i$, the $8 \\times 9$ algebraic system $\\mathbf{A}\\mathbf{h} = \\mathbf{0}$ is solved via SVD $\\mathbf{A} = \\mathbf{U}\\mathbf{\\Sigma}\\mathbf{V}^\\top$. Vector $\\mathbf{h}$ is the right singular vector associated with the smallest singular value ($\\sigma_9 \\approx 0$). In OpenCV, `cv2.findHomography` implements this normalized DLT algorithm.\n",
+            "- **Direct Linear Transformation (DLT) via SVD:** For 4 corner correspondences $\\mathbf{x}_i \\leftrightarrow \\mathbf{x}'_i$, the $8 \\times 9$ algebraic system $\\mathbf{A}\\mathbf{h} = \\mathbf{0}$ is solved via SVD $\\mathbf{A} = \\mathbf{U}\\mathbf{\\Sigma}\\mathbf{V}^\\top$. The solution $\\mathbf{h}$ is the last right singular vector, which spans the one-dimensional null space of $\\mathbf{A}$. In OpenCV, `cv2.findHomography` implements this normalized DLT algorithm.\n",
             "- **Alpha blending:** The flag image is warped into the facade quadrilateral and blended using transparency mask $M$: $I_{\\mathrm{blend}} = (1 - \\alpha M) \\odot I_{\\mathrm{arch}} + (\\alpha M) \\odot I_{\\mathrm{warped}}$.\n"
         ]
     })
@@ -488,7 +488,11 @@ def create_notebook():
             "        inliers = int(mask.sum()) if mask is not None else 0\n",
             "    else: H, mask, inliers = None, None, 0\n",
             "    aligned = cv2.warpPerspective(img_bgr, H, (w_t, h_t)) if H is not None else None\n",
-            "    diff = cv2.absdiff(cv2.cvtColor(aligned, cv2.COLOR_BGR2GRAY), tmpl_gray) if aligned is not None else None\n",
+            "    if aligned is not None:\n",
+            "        diff_raw = cv2.absdiff(cv2.cvtColor(aligned, cv2.COLOR_BGR2GRAY), tmpl_gray)\n",
+            "        diff_blur = cv2.GaussianBlur(diff_raw, (7, 7), 0)\n",
+            "        _, diff = cv2.threshold(diff_blur, 40, 255, cv2.THRESH_BINARY)\n",
+            "    else: diff = None\n",
             "    m_img = cv2.drawMatches(img_bgr, kp, tmpl_bgr, kp_t, good, None, matchColor=(0,255,0),\n",
             "                            singlePointColor=None, matchesMask=mask.ravel().tolist() if mask is not None else None,\n",
             "                            flags=cv2.DrawMatchesFlags_NOT_DRAW_SINGLE_POINTS)\n",

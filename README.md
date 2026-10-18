@@ -21,7 +21,7 @@ Repository for EN3160 Computer Vision Assignment 2 on Fitting and Alignment.
    - Implements custom RANSAC with unit normal parameterization $\|[a, b]^\top\| = 1$ and distance threshold $T = 0.85$.
    - Sequentially estimates the line, performs Total Least Squares (TLS) SVD refit on inliers, and fits the remnant circle using circumcenter sampling and Nelder-Mead optimization.
    - Features full numerical validation against ground truth ($\mathbf{n} \approx [0.7071, 0.7071]^\top, d \approx 1.4142, c=(2, 3), r=10$), plots both sample and refined fits, and justifies consensus sizes ($T_{\min} = 30-35$) and iterations using $N = \ln(1-p)/\ln(1-w^s)$.
-   - Honestly runs and reports real circle-first RANSAC on the full point cloud: recovers circle with 47 inliers but demonstrates partial degeneracy by capturing 5 line points across intersections, fragmenting the remnant line.
+   - Honestly runs and reports real circle-first RANSAC on the full point cloud: recovers circle with 45 inliers (39 circle points and 6 line points), demonstrating intersection contamination and fragmenting the remnant line.
    - Script: [`src/q2_ransac_fitting.py`](./src/q2_ransac_fitting.py) | Result: [`results/question_2/line_circle_ransac.png`](./results/question_2/line_circle_ransac.png)
 
 3. **Question 3: Planar Homography Warping and Flag Blending**
